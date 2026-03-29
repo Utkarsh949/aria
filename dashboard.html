@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ARIA — Autonomous Revenue Intelligence Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080a0f;
+    --bg2:       #0d1017;
+    --bg3:       #131820;
+    --panel:     rgba(255,255,255,0.03);
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(0,212,255,0.2);
+    --cyan:      #00d4ff;
+    --cyan-dim:  rgba(0,212,255,0.12);
+    --coral:     #ff6b47;
+    --coral-dim: rgba(255,107,71,0.12);
+    --green:     #00ff88;
+    --green-dim: rgba(0,255,136,0.1);
+    --yellow:    #ffd166;
+    --text:      #e8edf5;
+    --muted:     #5a6478;
+    --muted2:    #8894a8;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    overflow: hidden;
+  }
+
+  /* ── Noise overlay ─────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.5;
+  }
+
+  /* ── Grid bg ────────────────────────────── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  #app {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-rows: auto auto 1fr;
+    height: 100vh;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 16px 20px 12px;
+    gap: 0;
+  }
+
+  /* ── Header ──────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--cyan), var(--coral));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-head);
+    font-weight: 800; font-size: 14px;
+    color: #000; letter-spacing: -0.5px;
+    box-shadow: 0 0 20px rgba(0,212,255,0.3);
+    flex-shrink: 0;
+  }
+
+  .logo-text h1 {
+    font-family: var(--font-head);
+    font-size: 18px; font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--cyan), #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .logo-text p {
+    font-size: 10px; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+  }
+
+  /* ── API Key bar ──────────────────────────── */
+  .api-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    flex: 0 1 380px;
+    min-width: 260px;
+  }
+
+  .api-bar label {
+    font-size: 10px; color: var(--muted); letter-spacing: 0.1em; white-space: nowrap;
+    text-transform: uppercase;
+  }
+
+  .api-bar input {
+    flex: 1; background: none; border: none; outline: none;
+    font-family: var(--font-mono); font-size: 12px; color: var(--cyan);
+    min-width: 0;
+  }
+
+  .api-bar input::placeholder { color: var(--muted); }
+
+  .key-status {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .key-status.active { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+  .header-model {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--muted);
+  }
+  .model-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); flex-shrink: 0; }
+
+  /* ── Nav tabs ─────────────────────────────── */
+  nav {
+    display: flex; gap: 2px;
+    padding: 10px 0 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+
+  .tab {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 16px;
+    background: none; border: none;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--muted); cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    white-space: nowrap;
+    transition: color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+  .tab.active {
+    color: var(--cyan);
+    background: rgba(0,212,255,0.06);
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute; bottom: 0; left: 8px; right: 8px;
+    height: 2px; border-radius: 2px;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  .tab-icon { font-size: 14px; }
+
+  /* ── Main content ─────────────────────────── */
+  main {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-top: 1px solid var(--border2);
+    border-radius: 0 8px 8px 8px;
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; height: 100%; }
+  .panel.active { display: flex; }
+
+  /* ── Split layout ─────────────────────────── */
+  .split {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .form-col {
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .output-col {
+    overflow-y: auto;
+    display: flex; flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  /* ── Form elements ────────────────────────── */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  .field label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); font-weight: 500;
+  }
+
+  .field input, .field textarea {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--text); outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+  .field input:focus, .field textarea:focus { border-color: rgba(0,212,255,0.4); }
+  .field input::placeholder, .field textarea::placeholder { color: var(--muted); }
+
+  .btn {
+    padding: 10px 18px;
+    border: none; border-radius: 6px; cursor: pointer;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.05em;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), #4fc3f7);
+    color: #000;
+    box-shadow: 0 0 20px rgba(0,212,255,0.2);
+  }
+  .btn-primary:hover { box-shadow: 0 0 30px rgba(0,212,255,0.4); transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .btn-ghost {
+    background: var(--panel); border: 1px solid var(--border); color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ── Output area ──────────────────────────── */
+  .output-empty {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    color: var(--muted); padding: 40px;
+    text-align: center;
+  }
+
+  .output-empty .big-icon { font-size: 48px; opacity: 0.3; }
+  .output-empty p { font-size: 11px; max-width: 220px; line-height: 1.7; }
+
+  .output-content { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ── Cards ────────────────────────────────── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    animation: fadeSlide 0.3s ease;
+  }
+
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .card-head-left { display: flex; align-items: center; gap: 8px; }
+  .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .badge {
+    font-size: 9px; padding: 2px 7px; border-radius: 3px;
+    font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .badge-cyan  { background: var(--cyan-dim); color: var(--cyan); }
+  .badge-coral { background: var(--coral-dim); color: var(--coral); }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-yellow{ background: rgba(255,209,102,0.1); color: var(--yellow); }
+
+  .card-body { padding: 14px; }
+
+  .score-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 8px;
+  }
+  .score-num {
+    font-family: var(--font-head); font-size: 36px; font-weight: 800; line-height: 1;
+  }
+  .score-bar-wrap { flex: 1; height: 4px; background: var(--border); border-radius: 2px; }
+  .score-bar { height: 100%; border-radius: 2px; transition: width 0.6s ease; }
+
+  .kv-list { display: flex; flex-direction: column; gap: 6px; }
+  .kv { display: flex; gap: 10px; font-size: 12px; }
+  .kv-key { color: var(--muted); min-width: 130px; flex-shrink: 0; }
+  .kv-val { color: var(--text); word-break: break-word; }
+
+  .pill-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+  .pill {
+    font-size: 11px; padding: 3px 9px; border-radius: 3px;
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--muted2);
+  }
+
+  .signal-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+  }
+  .signal-item:last-child { border-bottom: none; }
+
+  .severity {
+    font-size: 9px; padding: 2px 6px; border-radius: 2px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .sev-critical { background: rgba(255,50,50,0.15); color: #ff5555; }
+  .sev-high     { background: rgba(255,107,71,0.15); color: var(--coral); }
+  .sev-medium   { background: rgba(255,209,102,0.15); color: var(--yellow); }
+  .sev-low      { background: var(--green-dim); color: var(--green); }
+
+  .signal-text { font-size: 12px; }
+  .signal-evidence { font-size: 11px; color: var(--muted2); margin-top: 2px; }
+
+  .email-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+    font-size: 12px; line-height: 1.8;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .email-subject { color: var(--cyan); font-weight: 600; margin-bottom: 10px; font-size: 13px; }
+
+  /* ── Chat panel ───────────────────────────── */
+  .chat-wrap {
+    display: flex; flex-direction: column;
+    flex: 1; overflow: hidden;
+  }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+  }
+
+  .msg { display: flex; gap: 10px; max-width: 85%; animation: fadeSlide 0.2s ease; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .msg.aria .msg-avatar { background: linear-gradient(135deg, var(--cyan), #4fc3f7); color: #000; font-weight: 800; font-family: var(--font-head); }
+  .msg.user .msg-avatar { background: var(--panel); border: 1px solid var(--border); }
+
+  .msg-bubble {
+    padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.7;
+    white-space: pre-wrap; word-break: break-word; max-width: 100%;
+  }
+  .msg.aria .msg-bubble {
+    background: var(--panel); border: 1px solid var(--border);
+    border-top-left-radius: 2px;
+  }
+  .msg.user .msg-bubble {
+    background: var(--cyan-dim); border: 1px solid var(--border2);
+    border-top-right-radius: 2px; color: var(--cyan);
+  }
+
+  .chat-input-row {
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px; align-items: flex-end;
+  }
+  .chat-input-row textarea {
+    flex: 1; background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 13px;
+    font-family: var(--font-mono); font-size: 13px; color: var(--text);
+    outline: none; resize: none; max-height: 120px; min-height: 42px;
+    transition: border-color 0.2s; line-height: 1.5;
+  }
+  .chat-input-row textarea:focus { border-color: rgba(0,212,255,0.4); }
+  .chat-input-row textarea::placeholder { color: var(--muted); }
+
+  /* ── Pipeline panel ───────────────────────── */
+  .pipeline-rows { display: flex; flex-direction: column; gap: 0; }
+  .pipeline-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 80px 80px 120px;
+    gap: 12px; align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    animation: fadeSlide 0.3s ease;
+  }
+  .pipeline-row.header-row {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--muted); background: rgba(255,255,255,0.01);
+    animation: none;
+  }
+  .pipeline-row:last-child { border-bottom: none; }
+  .deal-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .health-chip {
+    font-size: 11px; font-weight: 600;
+    padding: 3px 8px; border-radius: 3px; text-align: center;
+    white-space: nowrap;
+  }
+  .chip-green { background: var(--green-dim); color: var(--green); }
+  .chip-yellow{ background: rgba(255,209,102,0.1); color: var(--yellow); }
+  .chip-red   { background: rgba(255,50,50,0.1); color: #ff5555; }
+
+  .add-deal-row {
+    display: flex; gap: 8px; padding: 14px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  /* ── Spinner ──────────────────────────────── */
+  .spinner { display: inline-block; width: 14px; height: 14px; }
+  .spinner svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Thinking indicator ───────────────────── */
+  .thinking {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--muted); font-size: 12px; padding: 4px 0;
+  }
+  .dots span {
+    display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--cyan); animation: blink 1.2s infinite;
+    margin: 0 1.5px;
+  }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink {
+    0%,80%,100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+
+  .section-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 8px; margin-top: 4px;
+  }
+
+  .divider { height: 1px; background: var(--border); }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: #1a1f2e; border: 1px solid var(--border2);
+    border-radius: 8px; padding: 10px 16px;
+    font-size: 12px; color: var(--cyan);
+    animation: fadeSlide 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  .confidence-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; color: var(--muted);
+  }
+  .conf-bar-wrap { flex: 1; height: 3px; background: var(--border); border-radius: 2px; }
+  .conf-bar { height: 100%; border-radius: 2px; background: var(--cyan); }
+
+  pre.raw {
+    background: var(--bg); border-radius: 6px; padding: 12px;
+    font-size: 11px; color: var(--muted2); overflow-x: auto;
+    line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header>
+    <div class="logo">
+      <div class="logo-mark">AR</div>
+      <div class="logo-text">
+        <h1>ARIA</h1>
+        <p>Autonomous Revenue Intelligence Agent</p>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <div class="api-bar">
+        <label>GROQ API KEY</label>
+        <input type="password" id="apiKey" placeholder="gsk_..." autocomplete="off" />
+        <div class="key-status" id="keyStatus"></div>
+      </div>
+      <div class="header-model">
+        <div class="model-dot"></div>
+        <span>llama-3.3-70b · groq</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Nav ────────────────────────────────────────────────── -->
+  <nav>
+    <button class="tab active" data-tab="chat">
+      <span class="tab-icon">💬</span>Chat
+    </button>
+    <button class="tab" data-tab="prospect">
+      <span class="tab-icon">🔍</span>Prospecting
+    </button>
+    <button class="tab" data-tab="deal">
+      <span class="tab-icon">📊</span>Deal Intelligence
+    </button>
+    <button class="tab" data-tab="pipeline">
+      <span class="tab-icon">📈</span>Pipeline Audit
+    </button>
+    <button class="tab" data-tab="retention">
+      <span class="tab-icon">💡</span>Retention
+    </button>
+    <button class="tab" data-tab="competitive">
+      <span class="tab-icon">⚔️</span>Competitive Intel
+    </button>
+  </nav>
+
+  <!-- ── Main ───────────────────────────────────────────────── -->
+  <main>
+
+    <!-- CHAT -->
+    <div class="panel active" id="panel-chat">
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chatMessages">
+          <div class="msg aria">
+            <div class="msg-avatar">AR</div>
+            <div class="msg-bubble">Hi — I'm ARIA, your Autonomous Revenue Intelligence Agent. I can help you analyse deals, research prospects, predict churn, and track competitive signals.<br><br>Enter your GROQ API key above, then ask me anything about your sales pipeline.</div>
+          </div>
+        </div>
+        <div class="chat-input-row">
+          <textarea id="chatInput" rows="1" placeholder="Ask ARIA anything… e.g. 'How do I rescue a stalled deal?'" onkeydown="handleChatKey(event)"></textarea>
+          <button class="btn btn-primary" id="chatSendBtn" onclick="sendChat()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROSPECTING -->
+    <div class="panel" id="panel-prospect">
+      <div class="split">
+        <div class="form-col">
+          <div class="field">
+            <label>Company Name</label>
+            <input type="text" id="p-company" placeholder="Acme Corp" />
+          </div>
+          <div class="field">
+            <label>Target Role</label>
+            <input type="text" id="p-role" placeholder="VP of Sales" />
+          </div>
+          <div class="field">
+            <label>Additional Context</label>
+            <textarea id="p-extra" rows="4" placeholder="Series B startup, 200 employees, using legacy CRM…"></textarea>
+          </div>
+          <button class="btn btn-primary" id="prospectBtn" onclick="runProspect()">
+            <span>🔍</span> Research &amp; Generate Outreach
+          </button>
+          <div class="divider"></div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.7;">
+            Generates a research brief, ICP fit score, and personalised 3-touch outreach sequence for any target.
+          </div>
+        </div>
+        <div class="output-col" id="prospect-output">
+          <div class="output-empty">
+            <div class="big-icon">🔍</div>
+            <p>Enter a company and role, then click Research to generate a full prospecting profile.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEAL INTELLIGENCE -->
+    <div class="panel" id="panel-deal">
+      <div class="split">
+        <div class="form-col">
+          <div class="field">
+            <label>Deal Name</label>
+            <input type="text" id="d-name" placeholder="Acme Corp — Platform License" />
+          </div>
+          <div class="field">
+            <label>Deal Value ($)</label>
+            <input type="number" id="d-value" placeholder="85000" />
+          </div>
+          <div class="field">
+            <label>Stage</label>
+            <input type="text" id="d-stage" placeholder="negotiation" />
+          </div>
+          <div class="field">
+            <label>Close Probability (%)</label>
+            <input type="number" id="d-prob" placeholder="65" min="0" max="100" />
+          </div>
+          <div class="field">
+            <label>Days in Stage</label>
+            <input type="number" id="d-days" placeholder="22" />
+          </div>
+          <div class="field">
+            <label>Deal Notes / Signals</label>
+            <textarea id="d-notes" rows="4" placeholder="Champion went quiet after Q4 budget review. Competitor mentioned in last call."></textarea>
+          </div>
+          <div class="field">
+            <label>Competitor Mentions (comma-separated)</label>
+            <input type="text" id="d-comps" placeholder="Vendora, Salesforce" />
+          </div>
+          <button class="btn btn-primary" id="dealBtn" onclick="runDeal()">
+            <span>📊</span> Analyse Deal
+          </button>
+        </div>
+        <div class="output-col" id="deal-output">
+          <div class="output-empty">
+            <div class="big-icon">📊</div>
+            <p>Fill in the deal details to get a health score, risk signals, and recovery play.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIPELINE AUDIT -->
+    <div class="panel" id="panel-pipeline">
+      <div class="split">
+        <div class="form-col">
+          <div style="font-size:11px;color:var(--muted2);line-height:1.7;">
+            Add deals to the pipeline. Each deal is analysed concurrently for health score and risk.
+          </div>
+          <div id="pipelineDeals" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <button class="btn btn-ghost" onclick="addPipelineDeal()" style="font-size:11px;">
+            + Add Deal
+          </button>
+          <div class="divider"></div>
+          <button class="btn btn-primary" id="pipelineBtn" onclick="runPipeline()">
+            <span>📈</span> Audit Pipeline
+          </button>
+        </div>
+        <div class="output-col" id="pipeline-output">
+          <div class="output-empty">
+            <div class="big-icon">📈</div>
+            <p>Add at least one deal and run the audit to see health scores across your pipeline.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RETENTION -->
+    <div class="panel" id="panel-retention">
+      <div class="split">
+        <div class="form-col">
+          <div class="field">
+            <label>Account Name</label>
+            <input type="text" id="r-name" placeholder="TechNova Inc" />
+          </div>
+          <div class="field">
+            <label>ARR ($)</label>
+            <input type="number" id="r-arr" placeholder="120000" />
+          </div>
+          <div class="field">
+            <label>Tier</label>
+            <input type="text" id="r-tier" placeholder="enterprise" />
+          </div>
+          <div class="field">
+            <label>Health Score (0–100)</label>
+            <input type="number" id="r-health" placeholder="48" min="0" max="100" />
+          </div>
+          <div class="field">
+            <label>NPS Score</label>
+            <input type="number" id="r-nps" placeholder="6" min="0" max="10" />
+          </div>
+          <div class="field">
+            <label>Monthly Logins</label>
+            <input type="number" id="r-logins" placeholder="12" />
+          </div>
+          <div class="field">
+            <label>Feature Adoption (%)</label>
+            <input type="number" id="r-adoption" placeholder="35" min="0" max="100" />
+          </div>
+          <div class="field">
+            <label>Renewal Date</label>
+            <input type="date" id="r-renewal" />
+          </div>
+          <div class="field">
+            <label>Open Tickets</label>
+            <input type="number" id="r-tickets" placeholder="4" />
+          </div>
+          <button class="btn btn-primary" id="retentionBtn" onclick="runRetention()">
+            <span>💡</span> Analyse Churn Risk
+          </button>
+        </div>
+        <div class="output-col" id="retention-output">
+          <div class="output-empty">
+            <div class="big-icon">💡</div>
+            <p>Enter account details to get a churn risk score, signals, and intervention playbook.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPETITIVE INTEL -->
+    <div class="panel" id="panel-competitive">
+      <div class="split">
+        <div class="form-col">
+          <div class="field">
+            <label>Deal Name</label>
+            <input type="text" id="c-deal" placeholder="Acme Corp — Platform License" />
+          </div>
+          <div class="field">
+            <label>Deal Stage</label>
+            <input type="text" id="c-stage" placeholder="negotiation" />
+          </div>
+          <div class="field">
+            <label>Deal Value ($)</label>
+            <input type="number" id="c-value" placeholder="85000" />
+          </div>
+          <div class="field">
+            <label>Competitor Name</label>
+            <input type="text" id="c-comp" placeholder="Vendora" />
+          </div>
+          <div class="field">
+            <label>Deal Notes / Context</label>
+            <textarea id="c-notes" rows="4" placeholder="Competitor was mentioned in last call. Champion seems interested in their pricing model."></textarea>
+          </div>
+          <button class="btn btn-primary" id="compBtn" onclick="runCompetitive()">
+            <span>⚔️</span> Generate Battlecard
+          </button>
+        </div>
+        <div class="output-col" id="competitive-output">
+          <div class="output-empty">
+            <div class="big-icon">⚔️</div>
+            <p>Enter deal details and competitor name to generate a live battlecard and positioning update.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let pipelineDealCount = 0;
+
+// ── Groq API Key ───────────────────────────────────────────────────────────────
+const apiKeyInput = document.getElementById('apiKey');
+const keyStatus   = document.getElementById('keyStatus');
+
+apiKeyInput.addEventListener('input', () => {
+  keyStatus.classList.toggle('active', apiKeyInput.value.trim().length > 20);
+});
+
+function getKey() {
+  return apiKeyInput.value.trim();
+}
+
+function requireKey() {
+  if (getKey().length < 20) {
+    showToast('⚠️ Enter your Groq API key first — get one free at console.groq.com');
+    apiKeyInput.focus();
+    return false;
+  }
+  return true;
+}
+
+// ── Tab switching ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const id = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + id).classList.add('active');
+  });
+});
+
+// ── Groq LLM call ─────────────────────────────────────────────────────────────
+async function callAnthropic(systemPrompt, userPrompt, temperature = 0.7) {
+  const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${getKey()}`,
+    },
+    body: JSON.stringify({
+      model:       'llama-3.3-70b-versatile',
+      max_tokens:  2048,
+      temperature,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: userPrompt   },
+      ],
+    }),
+  });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Groq error: HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  return data.choices[0].message.content;
+}
+
+function parseJSON(raw) {
+  try { return JSON.parse(raw); } catch (_) {}
+  const m = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) try { return JSON.parse(m[1].trim()); } catch (_) {}
+  try { return JSON.parse(raw.replace(/^[^{[]*/, '').replace(/[^}\]]*$/, '')); } catch (_) {}
+  return { raw };
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ── Spinner btn ────────────────────────────────────────────────────────────────
+function setLoading(btnId, loading, label = 'Run') {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading
+    ? `<span class="spinner"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="rgba(0,0,0,0.3)" stroke-width="2"/><path d="M7 2a5 5 0 0 1 5 5" stroke="#000" stroke-width="2" stroke-linecap="round"/></svg></span> Thinking…`
+    : label;
+}
+
+// ── ARIA system prompt ─────────────────────────────────────────────────────────
+const ARIA_SYSTEM = `You are ARIA — Autonomous Revenue Intelligence Agent.
+You are a world-class AI sales strategist embedded inside CRM and communication systems.
+Your personality: sharp, empathetic, data-driven, and human. Never robotic.
+Always respond with specific, actionable, and evidence-based insights.
+Be concise but never shallow. Be bold but never reckless.
+Format structured output as JSON when requested. Return ONLY valid JSON — no markdown fences.`;
+
+// ══ CHAT ══════════════════════════════════════════════════════════════════════
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+async function sendChat() {
+  if (!requireKey()) return;
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  input.style.height = '';
+
+  const container = document.getElementById('chatMessages');
+  appendMsg(container, 'user', msg);
+
+  const thinkEl = appendThinking(container);
+  const btn = document.getElementById('chatSendBtn');
+  btn.disabled = true;
+
+  try {
+    const reply = await callAnthropic(ARIA_SYSTEM, msg);
+    thinkEl.remove();
+    appendMsg(container, 'aria', reply);
+  } catch (e) {
+    thinkEl.remove();
+    appendMsg(container, 'aria', '⚠️ Error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
+function appendMsg(container, role, text) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.innerHTML = `
+    <div class="msg-avatar">${role === 'aria' ? 'AR' : '👤'}</div>
+    <div class="msg-bubble">${escHtml(text)}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function appendThinking(container) {
+  const div = document.createElement('div');
+  div.className = 'msg aria';
+  div.innerHTML = `
+    <div class="msg-avatar">AR</div>
+    <div class="msg-bubble thinking">
+      <span>Thinking</span>
+      <span class="dots"><span></span><span></span><span></span></span>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+// ══ PROSPECTING ════════════════════════════════════════════════════════════════
+
+async function runProspect() {
+  if (!requireKey()) return;
+  const company = document.getElementById('p-company').value.trim();
+  const role    = document.getElementById('p-role').value.trim();
+  const extra   = document.getElementById('p-extra').value.trim();
+  if (!company || !role) { showToast('Enter company and role'); return; }
+
+  setLoading('prospectBtn', true, '🔍 Research &amp; Generate Outreach');
+  const out = document.getElementById('prospect-output');
+  out.innerHTML = `<div class="output-content"><div class="thinking" style="padding:30px 20px;"><span>Researching ${escHtml(company)}</span><span class="dots"><span></span><span></span><span></span></span></div></div>`;
+
+  try {
+    const PSYS = `You are ARIA's Prospecting Intelligence engine. Research B2B targets with precision and empathy. Return ONLY valid JSON — no markdown fences.`;
+
+    // Step 1: research
+    const researchRaw = await callAnthropic(PSYS,
+      `Research this prospect deeply:\nCompany: ${company}\nTarget role: ${role}\nAdditional context: ${extra || 'None'}\n\nProduce a structured research brief covering:\n1. Company overview (size, industry, stage)\n2. Likely pain points for a ${role}\n3. Key decision criteria for this buyer\n4. Tone this persona responds to\n\nBe specific. No fluff.`
+    );
+
+    // Step 2: score
+    const scoreRaw = await callAnthropic(PSYS, `Based on this research:\n${researchRaw}\n\nReturn ONLY this JSON:\n{"overall_score":<0-100>,"icp_match":<0-100>,"urgency":<0-100>,"budget_likelihood":<0-100>,"decision_maker_access":<0-100>,"rationale":"<2-3 sentences>","recommended_approach":"<direct|nurture|pass>"}`, 0.3)
+
+    // Step 3: sequence
+    const seqRaw = await callAnthropic(PSYS,
+      `Using this research:\n${researchRaw}\n\nAnd this fit score:\n${scoreRaw}\n\nReturn ONLY this JSON:\n{"touch_1":{"channel":"email","subject":"<compelling subject>","body":"<under 120 words, warm and specific>","send_delay_hours":0},"touch_2":{"channel":"linkedin","message":"<under 60 words>","send_delay_hours":48},"touch_3":{"channel":"email","subject":"<follow-up subject>","body":"<value-add under 100 words>","send_delay_hours":120},"personalization_hooks":["<hook 1>","<hook 2>","<hook 3>"]}`
+    );
+
+    const score = parseJSON(scoreRaw);
+    const seq   = parseJSON(seqRaw);
+    renderProspect(out, company, role, researchRaw, score, seq);
+  } catch (e) {
+    out.innerHTML = `<div class="output-content"><div class="card"><div class="card-body" style="color:var(--coral);">Error: ${escHtml(e.message)}</div></div></div>`;
+  } finally {
+    setLoading('prospectBtn', false, '🔍 Research &amp; Generate Outreach');
+  }
+}
+
+
+function renderProspect(container, company, role, research, score, seq) {
+  const overall = score.overall_score || 70;
+  const barColor = overall >= 70 ? 'var(--green)' : overall >= 50 ? 'var(--yellow)' : 'var(--coral)';
+  const approach = score.recommended_approach || 'direct';
+  const approachBadge = approach === 'direct' ? 'badge-green' : approach === 'nurture' ? 'badge-yellow' : 'badge-coral';
+
+  container.innerHTML = `<div class="output-content">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">Fit Score</span>
+          <span class="badge badge-cyan">${escHtml(company)}</span>
+        </div>
+        <span class="badge ${approachBadge}">${approach.toUpperCase()}</span>
+      </div>
+      <div class="card-body">
+        <div class="score-row">
+          <div class="score-num" style="color:${barColor}">${overall}</div>
+          <div style="flex:1;">
+            <div class="score-bar-wrap"><div class="score-bar" style="width:${overall}%;background:${barColor}"></div></div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;">Overall ICP Score</div>
+          </div>
+        </div>
+        <div class="kv-list">
+          ${metricRow('ICP Match', score.icp_match)}
+          ${metricRow('Urgency', score.urgency)}
+          ${metricRow('Budget Likelihood', score.budget_likelihood)}
+          ${metricRow('Decision Maker Access', score.decision_maker_access)}
+        </div>
+        ${score.rationale ? `<div style="margin-top:12px;font-size:12px;color:var(--muted2);line-height:1.7;">${escHtml(score.rationale)}</div>` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left"><span class="card-title">Research Brief</span></div>
+      </div>
+      <div class="card-body">
+        <div style="font-size:12px;line-height:1.8;color:var(--muted2);white-space:pre-wrap;">${escHtml(research)}</div>
+      </div>
+    </div>
+
+    ${seq && seq.touch_1 ? renderSequence(seq) : ''}
+  </div>`;
+}
+
+function metricRow(label, val) {
+  if (!val) return '';
+  const barColor = val >= 70 ? 'var(--green)' : val >= 50 ? 'var(--yellow)' : 'var(--coral)';
+  return `<div class="kv" style="align-items:center;gap:10px;">
+    <span class="kv-key" style="min-width:160px;">${escHtml(label)}</span>
+    <div style="flex:1;height:3px;background:var(--border);border-radius:2px;">
+      <div style="width:${val}%;height:100%;background:${barColor};border-radius:2px;"></div>
+    </div>
+    <span style="font-size:11px;color:${barColor};min-width:28px;text-align:right;">${val}</span>
+  </div>`;
+}
+
+function renderSequence(seq) {
+  const touches = [
+    { key: 'touch_1', label: 'Touch 1 — Email', icon: '📧' },
+    { key: 'touch_2', label: 'Touch 2 — LinkedIn', icon: '💼' },
+    { key: 'touch_3', label: 'Touch 3 — Email', icon: '📧' },
+  ];
+  let html = `<div class="card"><div class="card-head"><div class="card-head-left"><span class="card-title">Outreach Sequence</span></div></div><div class="card-body" style="display:flex;flex-direction:column;gap:16px;">`;
+  for (const t of touches) {
+    const touch = seq[t.key];
+    if (!touch) continue;
+    const delay = touch.send_delay_hours ? `+${touch.send_delay_hours}h` : 'Day 0';
+    html += `<div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <span style="font-size:13px;">${t.icon}</span>
+        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--cyan);">${t.label}</span>
+        <span class="badge badge-cyan">${delay}</span>
+      </div>
+      ${touch.subject ? `<div class="email-subject">${escHtml(touch.subject)}</div>` : ''}
+      <div class="email-box">${escHtml(touch.body || touch.message || '')}</div>
+    </div>`;
+  }
+  if (seq.personalization_hooks && seq.personalization_hooks.length) {
+    html += `<div><div class="section-label">Personalization Hooks</div><div class="pill-list">${seq.personalization_hooks.map(h => `<span class="pill">${escHtml(h)}</span>`).join('')}</div></div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+// ══ DEAL INTELLIGENCE ══════════════════════════════════════════════════════════
+
+async function runDeal() {
+  if (!requireKey()) return;
+  const name  = document.getElementById('d-name').value.trim() || 'Unknown Deal';
+  const value = +document.getElementById('d-value').value || 0;
+  const stage = document.getElementById('d-stage').value.trim() || 'unknown';
+  const prob  = +document.getElementById('d-prob').value || 50;
+  const days  = +document.getElementById('d-days').value || 0;
+  const notes = document.getElementById('d-notes').value.trim();
+  const comps = document.getElementById('d-comps').value.split(',').map(s => s.trim()).filter(Boolean);
+
+  const deal = { id: 'deal-ui', name, value, stage, close_probability: prob, days_in_stage: days, notes, competitor_mentions: comps };
+
+  setLoading('dealBtn', true, '📊 Analyse Deal');
+  const out = document.getElementById('deal-output');
+  out.innerHTML = `<div class="output-content"><div class="thinking" style="padding:30px 20px;"><span>Analysing deal</span><span class="dots"><span></span><span></span><span></span></span></div></div>`;
+
+  const DSYS = `You are ARIA's Deal Intelligence engine. You think like a seasoned enterprise sales director. Return ONLY valid JSON — no markdown fences.`;
+
+  try {
+    // Risk analysis
+    const riskRaw = await callAnthropic(DSYS,
+      `Analyse this deal for risk signals:\n${JSON.stringify(deal, null, 2)}\n\nReturn ONLY this JSON:\n{"signals_detected":[{"signal":"<name>","severity":"<low|medium|high|critical>","evidence":"<what suggests this>","days_until_impact":<int>}],"primary_risk":"<single biggest threat>","stakeholder_health":"<champion_strong|champion_weak|no_champion|unknown>","engagement_trend":"<increasing|stable|declining|dead>","competitor_threat_level":"<none|low|medium|high>"}`, 0.2
+    );
+    const risk = parseJSON(riskRaw);
+
+    // Health score
+    const health = calcHealth(risk, deal);
+
+    // Recovery play
+    const urgency = health >= 75 ? 'maintain momentum' : health >= 50 ? 'intervene within 48 hours' : 'URGENT — immediate action required';
+    const playRaw = await callAnthropic(DSYS,
+      `Generate a recovery play for this deal. Health: ${health}/100 — ${urgency}\n\nDeal: ${JSON.stringify(deal, null, 2)}\nRisk: ${JSON.stringify(risk, null, 2)}\n\nReturn ONLY this JSON:\n{"play_type":"<re-engage|neutralise_competitor|rebuild_champion|accelerate_close|rescue>","urgency":"${urgency}","primary_action":{"what":"<action>","who":"<who>","when":"<timing>","channel":"<channel>"},"talking_points":["<tp1>","<tp2>","<tp3>"],"email_template":{"subject":"<subject>","body":"<under 150 words>"},"success_metric":"<how to know it worked>","escalate_to_exec":<true|false>}`, 0.7
+    );
+    const play = parseJSON(playRaw);
+
+    renderDeal(out, deal, risk, health, play);
+  } catch (e) {
+    out.innerHTML = `<div class="output-content"><div class="card"><div class="card-body" style="color:var(--coral);">Error: ${escHtml(e.message)}</div></div></div>`;
+  } finally {
+    setLoading('dealBtn', false, '📊 Analyse Deal');
+  }
+}
+
+function calcHealth(risk, deal) {
+  let score = 100;
+  const sev = { low: 5, medium: 12, high: 20, critical: 30 };
+  for (const s of (risk.signals_detected || [])) score -= (sev[s.severity] || 5);
+  const sb = { closed_won: 0, negotiation: 5, proposal: 0, discovery: -5, prospecting: -10 };
+  score += sb[String(deal.stage || '').toLowerCase()] || 0;
+  if ((deal.days_in_stage || 0) > 30) score -= Math.min(15, ((deal.days_in_stage - 30) / 5) | 0);
+  return Math.max(0, Math.min(100, score));
+}
+
+function renderDeal(container, deal, risk, health, play) {
+  const hColor = health >= 70 ? 'var(--green)' : health >= 50 ? 'var(--yellow)' : '#ff5555';
+  const tLevel = risk.competitor_threat_level || 'none';
+  const tBadge = tLevel === 'high' ? 'badge-coral' : tLevel === 'medium' ? 'badge-yellow' : 'badge-cyan';
+
+  container.innerHTML = `<div class="output-content">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">Deal Health</span>
+          <span class="badge badge-cyan">${escHtml(deal.name)}</span>
+        </div>
+        <span class="badge ${tBadge}">Competitor: ${tLevel.toUpperCase()}</span>
+      </div>
+      <div class="card-body">
+        <div class="score-row">
+          <div class="score-num" style="color:${hColor}">${health}</div>
+          <div style="flex:1;">
+            <div class="score-bar-wrap"><div class="score-bar" style="width:${health}%;background:${hColor}"></div></div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;">Health Score / 100</div>
+          </div>
+        </div>
+        <div class="kv-list">
+          <div class="kv"><span class="kv-key">Primary Risk</span><span class="kv-val" style="color:var(--coral);">${escHtml(risk.primary_risk || '—')}</span></div>
+          <div class="kv"><span class="kv-key">Stakeholder</span><span class="kv-val">${escHtml(risk.stakeholder_health || '—')}</span></div>
+          <div class="kv"><span class="kv-key">Engagement</span><span class="kv-val">${escHtml(risk.engagement_trend || '—')}</span></div>
+        </div>
+      </div>
+    </div>
+
+    ${(risk.signals_detected || []).length ? `
+    <div class="card">
+      <div class="card-head"><div class="card-head-left"><span class="card-title">Risk Signals</span></div></div>
+      <div class="card-body">
+        ${(risk.signals_detected || []).map(s => `
+          <div class="signal-item">
+            <span class="severity sev-${s.severity || 'low'}">${s.severity || 'low'}</span>
+            <div>
+              <div class="signal-text">${escHtml(s.signal || '')}</div>
+              <div class="signal-evidence">${escHtml(s.evidence || '')} ${s.days_until_impact ? `· Impact in ${s.days_until_impact}d` : ''}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${play && play.play_type ? `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">Recovery Play</span>
+          <span class="badge badge-coral">${escHtml(play.play_type || '')}</span>
+        </div>
+        ${play.escalate_to_exec ? '<span class="badge badge-yellow">ESCALATE</span>' : ''}
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:11px;color:var(--coral);">${escHtml(play.urgency || '')}</div>
+        ${play.primary_action ? `
+        <div class="kv-list">
+          <div class="kv"><span class="kv-key">Action</span><span class="kv-val">${escHtml(play.primary_action.what || '')}</span></div>
+          <div class="kv"><span class="kv-key">Owner</span><span class="kv-val">${escHtml(play.primary_action.who || '')}</span></div>
+          <div class="kv"><span class="kv-key">When</span><span class="kv-val">${escHtml(play.primary_action.when || '')}</span></div>
+          <div class="kv"><span class="kv-key">Channel</span><span class="kv-val">${escHtml(play.primary_action.channel || '')}</span></div>
+        </div>` : ''}
+        ${(play.talking_points || []).length ? `
+        <div>
+          <div class="section-label">Talking Points</div>
+          ${(play.talking_points || []).map(tp => `<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:8px;"><span style="color:var(--cyan);">→</span><span>${escHtml(tp)}</span></div>`).join('')}
+        </div>` : ''}
+        ${play.email_template ? `
+        <div>
+          <div class="section-label">Recovery Email</div>
+          <div class="email-subject">${escHtml(play.email_template.subject || '')}</div>
+          <div class="email-box">${escHtml(play.email_template.body || '')}</div>
+        </div>` : ''}
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+// ══ PIPELINE AUDIT ═════════════════════════════════════════════════════════════
+
+function addPipelineDeal() {
+  pipelineDealCount++;
+  const id = pipelineDealCount;
+  const container = document.getElementById('pipelineDeals');
+  const div = document.createElement('div');
+  div.id = `pdeal-${id}`;
+  div.style.cssText = 'background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:6px;';
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);">Deal ${id}</span>
+      <button onclick="document.getElementById('pdeal-${id}').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0;">×</button>
+    </div>
+    <input type="text" placeholder="Deal name" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text);outline:none;" class="pd-name" />
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+      <input type="text" placeholder="Stage" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text);outline:none;" class="pd-stage" />
+      <input type="number" placeholder="Value $" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text);outline:none;" class="pd-value" />
+    </div>
+    <input type="text" placeholder="Notes / risk signals" style="background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-family:var(--font-mono);font-size:11px;color:var(--text);outline:none;" class="pd-notes" />
+  `;
+  container.appendChild(div);
+}
+
+async function runPipeline() {
+  if (!requireKey()) return;
+  const dealEls = document.querySelectorAll('[id^="pdeal-"]');
+  if (!dealEls.length) { showToast('Add at least one deal first'); return; }
+
+  const deals = [];
+  dealEls.forEach((el, i) => {
+    deals.push({
+      id: `pipeline-${i+1}`,
+      name: el.querySelector('.pd-name').value || `Deal ${i+1}`,
+      stage: el.querySelector('.pd-stage').value || 'unknown',
+      value: +el.querySelector('.pd-value').value || 0,
+      notes: el.querySelector('.pd-notes').value || '',
+      close_probability: 50,
+      days_in_stage: 0,
+    });
+  });
+
+  setLoading('pipelineBtn', true, '📈 Audit Pipeline');
+  const out = document.getElementById('pipeline-output');
+  out.innerHTML = `<div class="output-content"><div class="thinking" style="padding:30px 20px;"><span>Auditing ${deals.length} deal${deals.length > 1 ? 's' : ''}</span><span class="dots"><span></span><span></span><span></span></span></div></div>`;
+
+  const DSYS = `You are ARIA's Deal Intelligence engine. Return ONLY valid JSON — no markdown fences.`;
+
+  try {
+    const results = await Promise.all(deals.map(async deal => {
+      const riskRaw = await callAnthropic(DSYS,
+        `Analyse this deal for risk signals:\n${JSON.stringify(deal, null, 2)}\n\nReturn ONLY this JSON:\n{"signals_detected":[{"signal":"<name>","severity":"<low|medium|high|critical>","evidence":"<brief>","days_until_impact":<int>}],"primary_risk":"<biggest threat>","engagement_trend":"<increasing|stable|declining|dead>"}`, 0.2
+      );
+      const risk = parseJSON(riskRaw);
+      const health = calcHealth(risk, deal);
+      return { deal, risk, health };
+    }));
+
+    renderPipeline(out, results);
+  } catch (e) {
+    out.innerHTML = `<div class="output-content"><div class="card"><div class="card-body" style="color:var(--coral);">Error: ${escHtml(e.message)}</div></div></div>`;
+  } finally {
+    setLoading('pipelineBtn', false, '📈 Audit Pipeline');
+  }
+}
+
+function renderPipeline(container, results) {
+  const high = results.filter(r => r.health < 40);
+  const med  = results.filter(r => r.health >= 40 && r.health < 70);
+  const good = results.filter(r => r.health >= 70);
+  const totalVal = results.reduce((s, r) => s + (r.deal.value || 0), 0);
+
+  container.innerHTML = `<div class="output-content">
+    <div class="card">
+      <div class="card-head"><div class="card-head-left"><span class="card-title">Pipeline Summary</span></div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;">
+          <div><div style="font-size:24px;font-weight:800;font-family:var(--font-head);color:var(--cyan);">${results.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Total Deals</div></div>
+          <div><div style="font-size:24px;font-weight:800;font-family:var(--font-head);color:#ff5555;">${high.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">High Risk</div></div>
+          <div><div style="font-size:24px;font-weight:800;font-family:var(--font-head);color:var(--yellow);">${med.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Medium Risk</div></div>
+          <div><div style="font-size:24px;font-weight:800;font-family:var(--font-head);color:var(--green);">${good.length}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">Healthy</div></div>
+        </div>
+        ${totalVal ? `<div style="margin-top:12px;text-align:center;font-size:12px;color:var(--muted2);">Pipeline Value: <span style="color:var(--cyan);font-weight:600;">$${totalVal.toLocaleString()}</span></div>` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-head-left"><span class="card-title">Deal Breakdown</span></div></div>
+      <div class="pipeline-rows">
+        <div class="pipeline-row header-row">
+          <span>Deal</span><span>Stage</span><span>Value</span><span>Health</span><span>Primary Risk</span>
+        </div>
+        ${results.map(r => {
+          const hc = r.health >= 70 ? 'chip-green' : r.health >= 40 ? 'chip-yellow' : 'chip-red';
+          return `<div class="pipeline-row">
+            <span class="deal-name">${escHtml(r.deal.name)}</span>
+            <span style="font-size:11px;color:var(--muted2);">${escHtml(r.deal.stage)}</span>
+            <span style="font-size:11px;">${r.deal.value ? '$' + r.deal.value.toLocaleString() : '—'}</span>
+            <span class="health-chip ${hc}">${r.health}/100</span>
+            <span style="font-size:11px;color:var(--muted2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(r.risk.primary_risk || '—')}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ══ RETENTION ══════════════════════════════════════════════════════════════════
+
+async function runRetention() {
+  if (!requireKey()) return;
+  const name     = document.getElementById('r-name').value.trim() || 'Unknown';
+  const arr      = +document.getElementById('r-arr').value || 0;
+  const tier     = document.getElementById('r-tier').value.trim() || 'standard';
+  const health   = +document.getElementById('r-health').value || 50;
+  const nps      = +document.getElementById('r-nps').value || 0;
+  const logins   = +document.getElementById('r-logins').value || 0;
+  const adoption = +document.getElementById('r-adoption').value || 0;
+  const renewal  = document.getElementById('r-renewal').value || '';
+  const tickets  = +document.getElementById('r-tickets').value || 0;
+
+  const account = { id: 'acc-ui', name, arr, tier, health_score: health, nps, monthly_logins: logins, feature_adoption_pct: adoption, renewal_date: renewal, open_tickets: tickets };
+
+  setLoading('retentionBtn', true, '💡 Analyse Churn Risk');
+  const out = document.getElementById('retention-output');
+  out.innerHTML = `<div class="output-content"><div class="thinking" style="padding:30px 20px;"><span>Analysing ${escHtml(name)}</span><span class="dots"><span></span><span></span><span></span></span></div></div>`;
+
+  const RSYS = `You are ARIA's Revenue Retention engine. You think like a best-in-class Customer Success Director. Return ONLY valid JSON — no markdown fences.`;
+
+  try {
+    const churnRaw = await callAnthropic(RSYS,
+      `Analyse this account for churn risk:\n${JSON.stringify(account, null, 2)}\n\nReturn ONLY this JSON:\n{"churn_risk_score":<0-100>,"risk_tier":"<critical|high|medium|low|healthy>","primary_churn_driver":"<main reason>","churn_signals":[{"signal":"<name>","weight":<1-10>,"observation":"<what data shows>"}],"positive_signals":["<green flag 1>","<green flag 2>"],"sentiment_trend":"<improving|stable|declining|unknown>","health_category":"<champion_engaged|passive_user|at_risk|ghost>"}`, 0.2
+    );
+    const churn = parseJSON(churnRaw);
+    const score = churn.churn_risk_score || 50;
+
+    const strategy = score >= 75 ? 'immediate executive rescue' : score >= 50 ? 'proactive success intervention' : score >= 25 ? 'value reinforcement and growth' : 'advocacy and expansion';
+    const intRaw = await callAnthropic(RSYS,
+      `Build a retention intervention plan. Strategy: ${strategy}. Churn risk: ${score}/100.\n\nAccount: ${JSON.stringify(account, null, 2)}\nRisk analysis: ${JSON.stringify(churn, null, 2)}\n\nReturn ONLY this JSON:\n{"strategy":"${strategy}","interventions":[{"action":"<action>","owner":"<csm|exec|product|support>","timing":"<immediate|this_week|this_month>","channel":"<channel>"}],"outreach_email":{"to":"<title>","subject":"<subject>","body":"<warm email under 150 words>"},"escalate_to_exec":<true|false>,"success_criteria":"<what retention looks like in 30 days>","30_day_plan":["<week 1>","<week 2>","<week 3>","<week 4>"]}`, 0.7
+    );
+    const intervention = parseJSON(intRaw);
+    renderRetention(out, account, churn, intervention);
+  } catch (e) {
+    out.innerHTML = `<div class="output-content"><div class="card"><div class="card-body" style="color:var(--coral);">Error: ${escHtml(e.message)}</div></div></div>`;
+  } finally {
+    setLoading('retentionBtn', false, '💡 Analyse Churn Risk');
+  }
+}
+
+function renderRetention(container, account, churn, intervention) {
+  const score = churn.churn_risk_score || 50;
+  const rColor = score >= 70 ? '#ff5555' : score >= 50 ? 'var(--yellow)' : 'var(--green)';
+  const tier = churn.risk_tier || 'medium';
+  const tierBadge = tier === 'critical' || tier === 'high' ? 'badge-coral' : tier === 'medium' ? 'badge-yellow' : 'badge-green';
+
+  container.innerHTML = `<div class="output-content">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">Churn Risk</span>
+          <span class="badge badge-cyan">${escHtml(account.name)}</span>
+        </div>
+        <span class="badge ${tierBadge}">${tier.toUpperCase()}</span>
+      </div>
+      <div class="card-body">
+        <div class="score-row">
+          <div class="score-num" style="color:${rColor}">${score}</div>
+          <div style="flex:1;">
+            <div class="score-bar-wrap"><div class="score-bar" style="width:${score}%;background:${rColor}"></div></div>
+            <div style="font-size:10px;color:var(--muted);margin-top:4px;">Churn Risk Score / 100</div>
+          </div>
+        </div>
+        <div class="kv-list">
+          <div class="kv"><span class="kv-key">Primary Driver</span><span class="kv-val" style="color:var(--coral);">${escHtml(churn.primary_churn_driver || '—')}</span></div>
+          <div class="kv"><span class="kv-key">Health Category</span><span class="kv-val">${escHtml(churn.health_category || '—')}</span></div>
+          <div class="kv"><span class="kv-key">Sentiment Trend</span><span class="kv-val">${escHtml(churn.sentiment_trend || '—')}</span></div>
+        </div>
+        ${(churn.positive_signals || []).length ? `
+        <div style="margin-top:10px;">
+          <div class="section-label">Positive Signals</div>
+          <div class="pill-list">${(churn.positive_signals || []).map(s => `<span class="pill" style="color:var(--green);border-color:var(--green-dim);">✓ ${escHtml(s)}</span>`).join('')}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    ${(churn.churn_signals || []).length ? `
+    <div class="card">
+      <div class="card-head"><div class="card-head-left"><span class="card-title">Churn Signals</span></div></div>
+      <div class="card-body">
+        ${(churn.churn_signals || []).map(s => `
+          <div class="signal-item">
+            <span class="badge badge-coral" style="flex-shrink:0;">${s.weight || 0}/10</span>
+            <div>
+              <div class="signal-text" style="font-weight:500;">${escHtml(s.signal || '')}</div>
+              <div class="signal-evidence">${escHtml(s.observation || '')}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    ${intervention && intervention.strategy ? `
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">Intervention Plan</span>
+          <span class="badge badge-yellow">${escHtml(intervention.strategy || '')}</span>
+        </div>
+        ${intervention.escalate_to_exec ? '<span class="badge badge-coral">ESCALATE</span>' : ''}
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+        ${(intervention.interventions || []).map(i => `
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">
+            <span class="badge badge-cyan" style="flex-shrink:0;">${escHtml(i.timing || '')}</span>
+            <div>
+              <div style="font-size:12px;">${escHtml(i.action || '')}</div>
+              <div style="font-size:11px;color:var(--muted2);margin-top:2px;">Owner: ${escHtml(i.owner || '')} · via ${escHtml(i.channel || '')}</div>
+            </div>
+          </div>`).join('')}
+        ${(intervention['30_day_plan'] || []).length ? `
+        <div>
+          <div class="section-label">30-Day Plan</div>
+          ${(intervention['30_day_plan'] || []).map((w, i) => `<div style="display:flex;gap:8px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border);"><span style="color:var(--muted);min-width:48px;">Wk ${i+1}</span><span>${escHtml(w)}</span></div>`).join('')}
+        </div>` : ''}
+        ${intervention.outreach_email ? `
+        <div>
+          <div class="section-label">Outreach Email</div>
+          <div class="email-subject">${escHtml(intervention.outreach_email.subject || '')}</div>
+          <div class="email-box">${escHtml(intervention.outreach_email.body || '')}</div>
+        </div>` : ''}
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+// ══ COMPETITIVE INTEL ══════════════════════════════════════════════════════════
+
+async function runCompetitive() {
+  if (!requireKey()) return;
+  const dealName = document.getElementById('c-deal').value.trim() || 'Unknown Deal';
+  const stage    = document.getElementById('c-stage').value.trim() || 'unknown';
+  const value    = +document.getElementById('c-value').value || 0;
+  const comp     = document.getElementById('c-comp').value.trim();
+  const notes    = document.getElementById('c-notes').value.trim();
+  if (!comp) { showToast('Enter a competitor name'); return; }
+
+  const deal = { id: 'deal-ui', name: dealName, stage, value, notes };
+
+  setLoading('compBtn', true, '⚔️ Generate Battlecard');
+  const out = document.getElementById('competitive-output');
+  out.innerHTML = `<div class="output-content"><div class="thinking" style="padding:30px 20px;"><span>Generating battlecard vs ${escHtml(comp)}</span><span class="dots"><span></span><span></span><span></span></span></div></div>`;
+
+  const CSYS = `You are ARIA's Competitive Intelligence engine. Return ONLY valid JSON — no markdown fences.`;
+
+  try {
+    const bcRaw = await callAnthropic(CSYS,
+      `Generate a competitive battlecard for this deal against ${comp}.\n\nDeal context: ${JSON.stringify(deal, null, 2)}\n\nReturn ONLY this JSON:\n{"competitor":"${comp}","our_strengths_vs_them":[{"point":"<strength>","proof":"<evidence>"},{"point":"<strength>","proof":"<evidence>"},{"point":"<strength>","proof":"<evidence>"}],"their_weaknesses":[{"weakness":"<gap>","how_to_surface":"<tactic>"},{"weakness":"<gap>","how_to_surface":"<tactic>"}],"landmines":["<neutral question that plants doubt>","<question 2>","<question 3>"],"their_likely_attacks":[{"attack":"<what they say about us>","response":"<our rebuttal>"}],"win_themes":["<theme 1>","<theme 2>","<theme 3>"],"trap_setting_questions":["<discovery question>","<question 2>"]}`, 0.5
+    );
+    const bc = parseJSON(bcRaw);
+
+    const posRaw = await callAnthropic(CSYS,
+      `Given that ${comp} is in this deal, update our positioning.\n\nDeal: ${JSON.stringify(deal, null, 2)}\n\nReturn ONLY this JSON:\n{"headline_message":"<most important message>","repositioning_narrative":"<2-3 sentence shift>","proof_points":["<proof 1>","<proof 2>","<proof 3>"],"demo_focus":"<what to demo>","avoid_saying":["<message that helps them>"],"executive_hook":"<why economic buyer should choose us>"}`, 0.6
+    );
+    const pos = parseJSON(posRaw);
+
+    renderCompetitive(out, deal, comp, bc, pos);
+  } catch (e) {
+    out.innerHTML = `<div class="output-content"><div class="card"><div class="card-body" style="color:var(--coral);">Error: ${escHtml(e.message)}</div></div></div>`;
+  } finally {
+    setLoading('compBtn', false, '⚔️ Generate Battlecard');
+  }
+}
+
+function renderCompetitive(container, deal, comp, bc, pos) {
+  container.innerHTML = `<div class="output-content">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <span class="card-title">Battlecard</span>
+          <span class="badge badge-coral">vs ${escHtml(comp)}</span>
+        </div>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:16px;">
+        ${(bc.our_strengths_vs_them || []).length ? `
+        <div>
+          <div class="section-label">Our Strengths vs ${escHtml(comp)}</div>
+          ${(bc.our_strengths_vs_them || []).map(s => `
+            <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+              <div style="font-size:12px;font-weight:600;color:var(--green);">💪 ${escHtml(s.point || '')}</div>
+              <div style="font-size:11px;color:var(--muted2);margin-top:3px;">${escHtml(s.proof || '')}</div>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${(bc.their_weaknesses || []).length ? `
+        <div>
+          <div class="section-label">Their Weaknesses</div>
+          ${(bc.their_weaknesses || []).map(w => `
+            <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+              <div style="font-size:12px;color:var(--yellow);">⚡ ${escHtml(w.weakness || '')}</div>
+              <div style="font-size:11px;color:var(--muted2);margin-top:3px;">Surface with: ${escHtml(w.how_to_surface || '')}</div>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${(bc.landmines || []).length ? `
+        <div>
+          <div class="section-label">💣 Landmine Questions</div>
+          ${(bc.landmines || []).map(l => `<div style="padding:5px 0;font-size:12px;border-bottom:1px solid var(--border);display:flex;gap:8px;"><span style="color:var(--coral);">?</span><span>${escHtml(l)}</span></div>`).join('')}
+        </div>` : ''}
+
+        ${(bc.their_likely_attacks || []).length ? `
+        <div>
+          <div class="section-label">Their Likely Attacks & Rebuttals</div>
+          ${(bc.their_likely_attacks || []).map(a => `
+            <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+              <div style="font-size:11px;color:var(--coral);">Attack: ${escHtml(a.attack || '')}</div>
+              <div style="font-size:12px;color:var(--text);margin-top:4px;">→ ${escHtml(a.response || '')}</div>
+            </div>`).join('')}
+        </div>` : ''}
+
+        ${(bc.win_themes || []).length ? `
+        <div>
+          <div class="section-label">Win Themes</div>
+          <div class="pill-list">${(bc.win_themes || []).map(t => `<span class="pill" style="color:var(--cyan);border-color:var(--border2);">${escHtml(t)}</span>`).join('')}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    ${pos && pos.headline_message ? `
+    <div class="card">
+      <div class="card-head"><div class="card-head-left"><span class="card-title">Positioning Update</span></div></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="font-size:14px;font-weight:700;font-family:var(--font-head);color:var(--cyan);">${escHtml(pos.headline_message || '')}</div>
+        ${pos.repositioning_narrative ? `<div style="font-size:12px;color:var(--muted2);line-height:1.8;">${escHtml(pos.repositioning_narrative || '')}</div>` : ''}
+        ${(pos.proof_points || []).length ? `
+        <div>
+          <div class="section-label">Proof Points</div>
+          ${(pos.proof_points || []).map(p => `<div style="display:flex;gap:8px;font-size:12px;padding:4px 0;"><span style="color:var(--cyan);">✓</span><span>${escHtml(p)}</span></div>`).join('')}
+        </div>` : ''}
+        ${pos.executive_hook ? `<div style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:12px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px;">Executive Hook</div><div style="font-size:12px;line-height:1.7;">${escHtml(pos.executive_hook || '')}</div></div>` : ''}
+        ${pos.demo_focus ? `<div class="kv"><span class="kv-key">Demo Focus</span><span class="kv-val">${escHtml(pos.demo_focus)}</span></div>` : ''}
+        ${(pos.avoid_saying || []).length ? `<div style="background:rgba(255,50,50,0.05);border:1px solid rgba(255,50,50,0.15);border-radius:6px;padding:10px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:#ff5555;margin-bottom:5px;">⚠️ Avoid Saying</div>${(pos.avoid_saying || []).map(a => `<div style="font-size:12px;color:var(--muted2);">• ${escHtml(a)}</div>`).join('')}</div>` : ''}
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Auto-resize chat textarea
+document.getElementById('chatInput').addEventListener('input', function() {
+  this.style.height = '';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Add first pipeline deal by default
+addPipelineDeal();
+</script>
+</body>
+</html>
